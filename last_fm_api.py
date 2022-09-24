@@ -7,18 +7,34 @@ from utils import url_decode, flatten_list, is_cached, read_from_cache, write_to
 
 
 class LastFMApi():
-  def __init__(self, use_chace=True, cache_folder="pages", delay=2, username="") -> None:
+  def __init__(self, use_chace=True, cache_folder="pages", delay=2, username="", date=None) -> None:
     self.use_cache = use_chace
     self.cache_folder = cache_folder
     self.delay = delay
-    self.url = f"https://www.last.fm/user/{username}/library"
+    self.username = username
+    self.date = date
+
+  @property
+  def url(self):
+    url = f"https://www.last.fm/user/{self.username}/library"
+    if self.date:
+      url += f"?from={self.date}"
+    
+    return url
+
+  def page_url(self, page_num: int) -> str:
+    char = "?"
+    if self.date:
+      char = "&"
+    
+    return f"{self.url}{char}page={page_num}"
 
   def get_page(self, page_num: int) -> str:
     if self.use_cache:
       if is_cached(page_num, self.cache_folder):
         return read_from_cache(f"{page_num}.html", self.cache_folder)
 
-    page = get(f"{self.url}?page={page_num}").content.decode()
+    page = get(self.page_url(page_num)).content.decode()
     if self.use_cache:
       write_to_cache(f"{page_num}.html", self.cache_folder, page)
 

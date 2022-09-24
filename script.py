@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from last_fm_api import LastFMApi
 from utils import split_to_chunks, flatten_list, reset_cache
 from exporter import Exporter
+from importer import Importer
 from alive_progress import alive_bar
 import argparse
 
@@ -43,19 +44,31 @@ if __name__ == "__main__":
                       help="Save ouput to sql database", dest="export_db", action="store_true")
   parser.add_argument("--threads", default=5, type=int,
                       help="The amount of threads to use", dest="threads")
+  parser.add_argument("--resume", help="Resume from the last stored song", dest="resume", action="store_true")
   parser.add_argument("username", type=str, help="The username to scrap")
 
   args = parser.parse_args()
   if args.reset_cache:
     reset_cache(args.cache_folder)
 
+  date = None
+  importer = Importer()
+  if args.resume:
+    date = importer.latest_date
+
   api = LastFMApi(
     use_chace=args.use_cache,
     cache_folder=args.cache_folder,
     delay=args.delay,
-    username=args.username
+    username=args.username,
+    date=date
   )
 
   songs = export_songs(api, args.threads)
+  try: 
+    songs = importer.data + songs
+  except:
+    pass
+
   Exporter(args.export_csv, args.export_json,
            args.export_db, "out").export(songs)
