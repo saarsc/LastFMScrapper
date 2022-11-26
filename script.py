@@ -46,6 +46,7 @@ if __name__ == "__main__":
                       help="The amount of threads to use", dest="threads")
   parser.add_argument("--resume", help="Resume from the last stored song", dest="resume", action="store_true")
   parser.add_argument("username", type=str, help="The username to scrap")
+  parser.add_argument("password", type=str, help="User Password (requires to get everything past the first page)")
 
   args = parser.parse_args()
   if args.reset_cache:
@@ -61,6 +62,7 @@ if __name__ == "__main__":
     cache_folder=args.cache_folder,
     delay=args.delay,
     username=args.username,
+    password=args.password,
     date=date
   )
 

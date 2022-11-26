@@ -5,7 +5,7 @@ Pull all of your scrobbles from lastFM. Exports songs, artist, albums and scrobb
 ## Basic Usage
 
 ```bash
-  python script.py username 
+  python script.py username password
 ```
 
 ## Additional Flags

@@ -1,18 +1,18 @@
-from requests import get
+from requests import session, Session
 from bs4 import BeautifulSoup, Tag
 from datetime import datetime
 from time import sleep
 from typing import Union
 from utils import url_decode, flatten_list, is_cached, read_from_cache, write_to_cache
 
-
 class LastFMApi():
-  def __init__(self, use_chace=True, cache_folder="pages", delay=2, username="", date=None) -> None:
-    self.use_cache = use_chace
-    self.cache_folder = cache_folder
-    self.delay = delay
-    self.username = username
-    self.date = date
+  def __init__(self, use_chace=True, cache_folder="pages", delay=2, username="", password="", date=None) -> None:
+    self.use_cache: bool = use_chace
+    self.cache_folder: str = cache_folder
+    self.delay: float = delay
+    self.username: str = username
+    self.date: str = date
+    self.auth(username, password)
 
   @property
   def url(self):
@@ -21,6 +21,49 @@ class LastFMApi():
       url += f"?from={self.date}"
     
     return url
+  
+  @classmethod
+  def auth(self, username, password) -> session:
+    _s: Session = session()
+    login_page = BeautifulSoup(
+      _s.get("https://www.last.fm/login").content
+    )
+
+    csrf = login_page.find("input", {
+      "name": "csrfmiddlewaretoken"
+    })["value"]
+
+    payload = {
+      "csrfmiddlewaretoken":csrf,
+      "next": "/user/_",
+      "username_or_email": username,
+      "password": password,
+      "submit": ""
+    }
+
+    headers = {
+      "Cache-Control": "max-age=0", 
+      "Sec-Ch-Ua": "\"Chromium\";v=\"107\", \"Not=A?Brand\";v=\"24\"", 
+      "Sec-Ch-Ua-Mobile": "?0", 
+      "Sec-Ch-Ua-Platform": "\"Windows\"", 
+      "Upgrade-Insecure-Requests": "1", 
+      "Origin": "https://www.last.fm", 
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.5304.107 Safari/537.36", 
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9", 
+      "Sec-Fetch-Site": "same-origin", 
+      "Sec-Fetch-Mode": "navigate", 
+      "Sec-Fetch-User": "?1", 
+      "Sec-Fetch-Dest": "document", 
+      "Referer": "https://www.last.fm/login", 
+      "Accept-Encoding": "gzip, deflate", 
+      "Accept-Language": 
+      "en-US,en;q=0.9"
+    }
+
+    r = _s.post("https://www.last.fm/login", data=payload, headers=headers)
+    setattr(self, "session", _s)
+    return _s
 
   def page_url(self, page_num: int) -> str:
     char = "?"
@@ -34,7 +77,7 @@ class LastFMApi():
       if is_cached(page_num, self.cache_folder):
         return read_from_cache(f"{page_num}.html", self.cache_folder)
 
-    page = get(self.page_url(page_num)).content.decode()
+    page = self.session.get(self.page_url(page_num)).content.decode()
     if self.use_cache:
       write_to_cache(f"{page_num}.html", self.cache_folder, page)
 
